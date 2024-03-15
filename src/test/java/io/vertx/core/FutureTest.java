@@ -11,22 +11,31 @@
 
 package io.vertx.core;
 
-import io.vertx.core.impl.ContextInternal;
-import io.vertx.core.impl.NoStackTraceThrowable;
-import io.vertx.core.impl.future.PromiseInternal;
-import io.vertx.test.core.Repeat;
-import org.junit.Test;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import org.junit.Test;
+
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.NoStackTraceThrowable;
+import io.vertx.core.impl.future.PromiseInternal;
+import io.vertx.test.core.Repeat;
 
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
@@ -70,6 +79,25 @@ public class FutureTest extends FutureTestBase {
       throw cause;
     });
     assertSame(cause, f3.cause());
+  }
+
+  @Test
+  public void join() {
+    waitFor(1);
+
+    final Future<String> f1 = Future.failedFuture(new RuntimeException());
+    final Future<String> f2 = Future.failedFuture(new RuntimeException());
+
+    Future.join(f1, f2)
+      .transform(ar -> {
+        assertTrue(ar instanceof CompositeFuture);
+        return (CompositeFuture) ar;
+      })
+      .onComplete(ar -> {
+        complete();
+      });
+
+    await();
   }
 
   @Test
